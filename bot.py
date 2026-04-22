@@ -12,42 +12,37 @@ def run_account(account):
     name = account["name"]
     key = account["api_key"]
 
-    balance = api.get_balance(key)
-    reward = api.get_rewards(key)
-
     market, oracle = api.get_prices(CONFIG["symbol"], key)
 
-    if not strategy.should_trade(market, oracle):
+    if market is None:
+        print("Skip karena data error")
         return
 
-    buy_price, sell_price = strategy.calculate_prices(oracle)
+    if not strategy.should_trade(market, oracle):
+        print("Skip: market dekat oracle")
+        return
 
-    if not strategy.validate(buy_price, sell_price):
+    buy, sell = strategy.calculate_prices(oracle)
+
+    if not strategy.validate(buy, sell):
+        print("Skip: invalid spread")
         return
 
     status = []
 
-    buy_tx = api.place_order(CONFIG["symbol"], "buy", buy_price, CONFIG["amount"], key)
-    sell_tx = api.place_order(CONFIG["symbol"], "sell", sell_price, CONFIG["amount"], key)
+    buy_tx = api.place_order(CONFIG["symbol"], "buy", buy, CONFIG["amount"], key)
+    sell_tx = api.place_order(CONFIG["symbol"], "sell", sell, CONFIG["amount"], key)
 
-    if buy_tx:
+    if "error" not in str(buy_tx):
         status.append("Buy Order Sent")
-    if sell_tx:
+    if "error" not in str(sell_tx):
         status.append("Sell Order Sent")
 
+    balance = api.get_balance(key)
+    reward = api.get_rewards(key)
     orders = api.get_orders(key)
 
-    ui.show_ui(
-        name,
-        balance,
-        reward,
-        market,
-        oracle,
-        buy_price,
-        sell_price,
-        orders,
-        status
-    )
+    ui.show_ui(name, balance, reward, market, oracle, buy, sell, orders, status)
 
 
 def main():
@@ -59,7 +54,7 @@ def main():
             time.sleep(random.uniform(2, 5))
 
         except Exception as e:
-            print("ERROR:", e)
+            print("FATAL ERROR:", e)
 
 
 if __name__ == "__main__":
