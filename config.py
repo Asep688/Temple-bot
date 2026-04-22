@@ -6,5 +6,5 @@ CONFIG = {
 
     "amount": 10,
     "interval": 3,
-    "min_deviation": 0.001
+    "min_deviation": 0.0001
 }
